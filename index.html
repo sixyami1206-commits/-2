@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WHOOポータル v3.5 Complete</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: linear-gradient(135deg, #e0e8f5 0%, #cbd5e1 100%);
+      margin: 0; padding: 0; color: #333;
+      display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+    }
+
+    .phone-container {
+      width: 100%; max-width: 480px; background: #ffffff;
+      min-height: 100vh; box-shadow: 0 0 25px rgba(0,0,0,0.1);
+      box-sizing: border-box; display: flex; flex-direction: column;
+    }
+
+    header { background: #ffffff; padding: 12px 15px; border-bottom: 1px solid #e2e8f0; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .logo-area { display: flex; flex-direction: column; }
+    .logo { font-size: 26px; font-weight: 900; color: #1d4ed8; letter-spacing: 1px; }
+    .live-clock { font-size: 11px; color: #64748b; font-weight: bold; margin-top: 2px; }
+    .login-status-area { font-size: 13px; font-weight: bold; }
+    
+    .login-btn {
+      background: #3b82f6; border: none; padding: 7px 14px; border-radius: 20px;
+      cursor: pointer; font-size: 12px; font-weight: bold; color: white; box-shadow: 0 2px 4px rgba(59,130,246,0.2);
+    }
+    .user-logged-in { color: #10b981; background: #e6f4ea; padding: 6px 12px; border-radius: 20px; }
+
+    /* 🌤️ 天気表示エリア（ニュースとは別口独立） */
+    .weather-panel {
+      background: #e0f2fe; border-bottom: 1px solid #bae6fd; padding: 10px 15px;
+      font-size: 14px; font-weight: bold; color: #0369a1; display: flex; justify-content: space-between; align-items: center;
+    }
+    .weather-detail { font-size: 13px; color: #0284c7; }
+
+    /* 📱 メニューアイコンナビ（画像テーマを完全に再現） */
+    .nav-icons-container { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 12px; padding: 15px; background: #ffffff; border-bottom: 8px solid #f0f4f8; }
+    .nav-icon-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #333; font-size: 11px; font-weight: bold; width: 78px; text-align: center; gap: 6px; cursor: pointer; transition: opacity 0.2s; }
+    .icon-circle { width: 45px; height: 45px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    
+    /* 使用制限時にメニューを押せなくするスタイル */
+    .nav-disabled { opacity: 0.3 !important; cursor: not-allowed !important; pointer-events: none !important; }
+
+    /* アイコン背景色 */
+    .ic-poikatsu { background: #fef3c7; } .ic-weather { background: #e0f2fe; } .ic-delivery { background: #fee2e2; } .ic-tracking { background: #e0faf2; } .ic-tetris { background: #f3e8ff; } .ic-signup { background: #e0f2fe; } .ic-fortune { background: #fffbeb; } .ic-memo { background: #f1f5f9; } .ic-status { background: #fee2e2; }
+
+    /* 📝 メモ・🔮 占いのポップアップ展開エリア */
+    .toggle-content-box { display: none; background: #fafafa; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; margin: 0 15px 15px 15px; }
+    .memo-textarea { width: 100%; height: 80px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; box-sizing: border-box; font-size: 13px; resize: none; outline: none; margin-top: 5px; }
+    .memo-textarea:focus { border-color: #3b82f6; }
+    .memo-status { font-size: 11px; color: #10b981; text-align: right; margin-top: 4px; display: none; }
+
+    .fortune-input-box { margin-top: 6px; display: flex; justify-content: center; gap: 6px; }
+    .fortune-select { padding: 4px; font-size: 12px; border: 1px solid #f59e0b; border-radius: 4px; outline: none; }
+    .fortune-btn { background: #f59e0b; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; }
+
+    /* 📰 ニュースセクション */
+    .news-section { background: #ffffff; flex: 1; }
+    .news-tabs { display: flex; border-bottom: 1px solid #e2e8f0; overflow-x: auto; white-space: nowrap; }
+    .news-tab { padding: 12px 18px; font-size: 14px; font-weight: bold; color: #64748b; background: none; border: none; cursor: pointer; position: relative; }
+    .news-tab.active { color: #ef4444; }
+    .news-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: #ef4444; }
+    .news-list { padding: 0; margin: 0; list-style: none; }
+    .news-item { border-bottom: 1px solid #f1f5f9; }
+    .news-link { display: flex; align-items: center; padding: 14px 15px; text-decoration: none; color: #1e293b; font-size: 15px; font-weight: bold; line-height: 1.4; gap: 10px; }
+    
+    .category-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; font-weight: bold; white-space: nowrap; }
+    .badge-news { background: #3b82f6; } .badge-otoku { background: #f59e0b; } .badge-geino { background: #ec4899; } .badge-sports { background: #10b981; } .badge-default { background: #64748b; }
+    .news-loading { text-align: center; padding: 40px; color: #64748b; font-size: 14px; }
+
+    /* 🔒 ログインモーダル */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-card { background: white; width: 90%; max-width: 380px; border-radius: 16px; padding: 25px; box-sizing: border-box; text-align: center; position: relative; }
+    .modal-close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; }
+    .input-field { width: 100%; padding: 12px; margin-bottom: 12px; border: 2px solid #cbd5e0; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; }
+    .action-btn { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+    
+    footer { text-align: center; padding: 20px 0; font-size: 11px; color: #94a3b8; background: #ffffff; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+
+  <div class="phone-container">
+    <header>
+      <div class="header-top">
+        <div class="logo-area">
+          <div class="logo">WHOO</div>
+          <div class="live-clock" id="current-clock">--------年--月--日(--) --:--:--</div>
+        </div>
+        <div id="auth-status-container" class="login-status-area">
+          <button class="login-btn" onclick="openAuthModal()">ログイン</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 🌤️ 天気表示エリア（ニュースとは完全独立して稼働） -->
+    <div class="weather-panel">
+      <span id="weather-main">🌤️ 天気情報を取得中...</span>
+      <span id="weather-temp" class="weather-detail">--℃</span>
+    </div>
+
+    <!-- 📱 メニューアイコンコンテナ -->
+    <div class="nav-icons-container" id="menu-icons-wrapper">
+      <a href="https://sites.google.com/view/kennsixya/home" class="nav-icon-item" target="_blank"><div class="icon-circle ic-poikatsu">💰</div><span>ポイ活・懸賞</span></a>
+      <a href="https://sites.google.com/view/tennkicomjp/home" class="nav-icon-item" target="_blank"><div class="icon-circle ic-weather">🌤️</div><span>天気予報</span></a>
+      <a href="https://sites.google.com/view/ehfvbtgbiwww/home" class="nav-icon-item" target="_blank"><div class="icon-circle ic-delivery">🍔</div><span>デリバリー</span></a>
+      <a href="https://sites.google.com/view/fufucfhhfhfbfh/home" class="nav-icon-item" target="_blank"><div class="icon-circle ic-tracking">📦</div><span>配達追跡</span></a>
+      <a href="https://sites.google.com/view/tetirisss/home" class="nav-icon-item" target="_blank"><div class="icon-circle ic-tetris">🧩</div><span>ぷよテト</span></a>
+      <a href="https://sites.google.com/view/xfggvghb/home" class="nav-icon-item" target="_blank"><div class="icon-circle ic-signup">🔑</div><span>アカウント作成</span></a>
+      
+      <!-- アカウント利用状況確認メニューを追加 -->
+      <a href="https://sites.google.com/view/whoacsa/home" class="nav-icon-item" target="_blank"><div class="icon-circle ic-status">🛡️</div><span>利用状況確認</span></a>
+      
+      <!-- 展開型メニュー（占い・メモ） -->
+      <div class="nav-icon-item" onclick="toggleContentPanel('fortune-dropdown')"><div class="icon-circle ic-fortune">🔮</div><span>誕生日占い</span></div>
+      <div class="nav-icon-item" onclick="toggleContentPanel('memo-dropdown')"><div class="icon-circle ic-memo">📝</div><span>クラウドメモ</span></div>
+    </div>
+
+    <!-- 🔮 ドロップダウン占いエリア -->
+    <div id="fortune-dropdown" class="toggle-content-box">
+      <div id="fortune-txt" style="font-weight:bold; color:#b45309; font-size:13px; text-align:center;">🔮 生年月日を選択して今日の運勢を占おう</div>
+      <div class="fortune-input-box">
+        <select id="fortune-m" class="fortune-select"></select><span>月</span>
+        <select id="fortune-d" class="fortune-select"></select><span>日</span>
+        <button class="fortune-btn" onclick="runBirthdayFortune()">占う</button>
+      </div>
+    </div>
+
+    <!-- 📝 ドロップダウンメモエリア（メニューから開く仕様へ変更） -->
+    <div id="memo-dropdown" class="toggle-content-box">
+      <div style="font-size:14px; font-weight:bold; color:#1e293b;">📝 自分専用クラウドメモ <span id="memo-user-tag" style="font-size:11px; color:#64748b; font-weight:normal;">(ログインすると同期保存)</span></div>
+      <textarea id="personal-memo" class="memo-textarea" placeholder="ログインすると、ここに書いた内容が自動保存されます..." disabled oninput="savePersonalMemo()"></textarea>
+      <div id="memo-save-status" class="memo-status">✓ アカウントに自動保存されました</div>
+    </div>
+
+    <!-- 📰 ニュースセクション -->
+    <div class="news-section">
+      <div class="news-tabs">
+        <button class="news-tab active" onclick="switchNewsTab('すべて', this)">すべて</button>
+        <button class="news-tab" onclick="switchNewsTab('ニュース', this)">ニュース</button>
+        <button class="news-tab" onclick="switchNewsTab('おトク', this)">おトク</button>
+        <button class="news-tab" onclick="switchNewsTab('芸能', this)">芸能</button>
+        <button class="news-tab" onclick="switchNewsTab('スポーツ', this)">スポーツ</button>
+      </div>
+      <div id="news-content-target"><div class="news-loading">📰 最新ニュース読み込み中...</div></div>
+    </div>
+
+    <footer>© WHOO JAPAN ポータルシステム</footer>
+  </div>
+
+  <!-- 🔒 ログインモーダル -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeAuthModal()">×</button>
+      <h3 style="margin-top:0; color:#1e293b;">ログイン認証</h3>
+      <div>
+        <input type="text" id="login-id" class="input-field" placeholder="アカウントIDを入力">
+        <input type="password" id="login-pass" class="input-field" placeholder="パスワードを入力">
+        <button class="action-btn" onclick="handleSpreadsheetLogin()">ログイン</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DATA_SPREADSHEET = "https://docs.google.com/spreadsheets/d/1J3Bc1ztIZzw9cCg5jACi7W9SqACqYZSqBtzPE2OT2MY"; 
+    const AUTH_SPREADSHEET = "https://docs.google.com/spreadsheets/d/1N0RBiDzTGBKeHWSe5mQIr6eIdSsRQUTLUziyyL5o-I0"; 
+
+    let currentLoggedInUser = null;
+    let rawNewsData = [];
+
+    window.onload = function() {
+      startClock();
+      initSelectBoxes();
+      fetchIndependentWeather();
+      fetchNewsData();
+      
+      const savedUser = localStorage.getItem('whoo_active_user');
+      const restrictCheck = localStorage.getItem('whoo_restrict_flag');
+      
+      if (restrictCheck === "true") {
+        applyMenuRestriction(); // 使用制限がかかっていた場合は最初からメニュー無効化
+      }
+      if (savedUser && restrictCheck !== "true") {
+        setupUserSession(savedUser);
+      }
+    };
+
+    // 🕒 時計機能
+    function startClock() {
+      const days = ['日', '月', '火', '水', '木', '金', '土'];
+      setInterval(() => {
+        const now = new Date();
+        document.getElementById('current-clock').innerText = 
+          `${now.getFullYear()}年${String(now.getMonth()+1).padStart(2,'0')}月${String(now.getDate()).padStart(2,'0')}日(${days[now.getDay()]}) ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      }, 1000);
+    }
+
+    // 🌤️ 天気取得処理
+    function fetchIndependentWeather() {
+      const weatherCsvUrl = `${DATA_SPREADSHEET}/gviz/tq?tqx=out:csv&sheet=%E5%A4%A9%E6%B0%97`;
+      fetch(weatherCsvUrl)
+        .then(res => res.text())
+        .then(text => {
+          const lines = text.split(/\r?\n/);
+          if(lines.length > 0 && lines[0].trim() !== "") {
+            const row = lines[0].split(",").map(cell => cell.replace(/^"|"$/g, "").trim());
+            document.getElementById('weather-main').innerText = `🌤️ ${row[0] || "横浜"}の天気: ${row[1] || "不明"}`;
+            document.getElementById('weather-temp').innerText = `${row[3] || "--"}℃`;
+          }
+        }).catch(() => {
+          document.getElementById('weather-main').innerText = "🌤️ 天気データの取得に失敗しました";
+        });
+    }
+
+    // 📱 ドロップダウンパネルの開閉制御
+    function toggleContentPanel(id) {
+      const panel = document.getElementById(id);
+      const isOpen = panel.style.display === 'block';
+      document.querySelectorAll('.toggle-content-box').forEach(b => b.style.display = 'none');
+      panel.style.display = isOpen ? 'none' : 'block';
+    }
+
+    // 🔮 占い初期化・実行
+    function initSelectBoxes() {
+      const mSel = document.getElementById('fortune-m'); const dSel = document.getElementById('fortune-d');
+      for(let i=1; i<=12; i++) mSel.innerHTML += `<option value="${i}">${i}</option>`;
+      for(let i=1; i<=31; i++) dSel.innerHTML += `<option value="${i}">${i}</option>`;
+    }
+
+    function runBirthdayFortune() {
+      const m = document.getElementById('fortune-m').value; const d = document.getElementById('fortune-d').value;
+      const results = ["究極の大吉 🌟 全てが思い通りに進む最高の1日！", "大吉 ☀️ 欲しかったチャンスが舞い込みそう！", "中吉 🎉 友達や周囲との協力でラッキー度UP！", "小吉 ☁️ いつも通りのペースを守れば手堅い1日！", "吉 🌙 忘れ物に注意すれば運気安定！"];
+      const index = (parseInt(m) + parseInt(d)) % results.length;
+      document.getElementById('fortune-txt').innerHTML = `結果: <span style="color:#d97706; font-size:14px;">${results[index]}</span>`;
+    }
+
+    // 📝 メモ機能セッション
+    function setupUserSession(userId) {
+      currentLoggedInUser = userId;
+      document.getElementById('auth-status-container').innerHTML = `<span class="user-logged-in">👤 ${userId} さん</span>`;
+      const memoField = document.getElementById('personal-memo');
+      memoField.disabled = false;
+      document.getElementById('memo-user-tag').innerText = `(${userId} 専用同期中)`;
+      memoField.value = localStorage.getItem(`whoo_memo_${userId}`) || "";
+    }
+
+    function savePersonalMemo() {
+      if(!currentLoggedInUser) return;
+      localStorage.setItem(`whoo_memo_${currentLoggedInUser}`, document.getElementById('personal-memo').value);
+      const statusTxt = document.getElementById('memo-save-status');
+      statusTxt.style.display = 'block'; setTimeout(() => { statusTxt.style.display = 'none'; }, 1500);
+    }
+
+    // 🚫 使用制限時のメニューロック機能
+    function applyMenuRestriction() {
+      document.querySelectorAll('.nav-icon-item').forEach(el => {
+        el.classList.add('nav-disabled');
+      });
+    }
+
+    // 🔒 スプレッドシート連動ログイン認証・エラー分岐
+    function handleSpreadsheetLogin() {
+      const inputId = document.getElementById('login-id').value.trim();
+      const inputPass = document.getElementById('login-pass').value.trim();
+
+      if(!inputId || !inputPass) {
+        alert("IDとパスワードを入力してください。");
+        return;
+      }
+
+      const authCsvUrl = `${AUTH_SPREADSHEET}/gviz/tq?tqx=out:csv&sheet=%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3`;
+
+      fetch(authCsvUrl)
+        .then(res => res.text())
+        .then(text => {
+          const lines = text.split(/\r?\n/);
+          let userFound = false;
+
+          for(let i=0; i<lines.length; i++) {
+            if(!lines[i].trim()) continue;
+            const row = lines[i].split(",").map(cell => cell.replace(/^"|"$/g, "").trim());
+            
+            const sheetId = row[0];   
+            const sheetPass = row[1]; 
+            const sheetStatus = row[2]; // 利用ステータス
+
+            if(sheetId === inputId) {
+              userFound = true;
+              if(sheetPass !== inputPass) {
+                alert("パスワードが違います。");
+                return;
+              }
+
+              // ステータス判定（ご指定テキスト完全一致）
+              if(sheetStatus === "使用可能") {
+                localStorage.setItem('whoo_active_user', inputId);
+                localStorage.removeItem('whoo_restrict_flag');
+                setupUserSession(inputId);
+                // メニューロックを解除
+                document.querySelectorAll('.nav-icon-item').forEach(el => el.classList.remove('nav-disabled'));
+                closeAuthModal();
+                alert(`ログイン成功！ようこそ、${inputId}さん。`);
+              } 
+              else if(sheetStatus === "使用制限") {
+                localStorage.setItem('whoo_restrict_flag', "true");
+                applyMenuRestriction(); // メニューを押せなくする
+                closeAuthModal();
+                alert("使用制限アカウントです。");
+              } 
+              else if(sheetStatus === "BAN") {
+                alert("お客様のアカウントは何らかの影響で、BANされました。詳細は、ワホーアカウント確認サイトから、確認して下さい。新しいアカウントを作ることも選択肢となります。");
+              }
+              return;
+            }
+          }
+
+          if(!userFound) {
+            alert("❌ 指定されたアカウントIDが存在しません。");
+          }
+        })
+        .catch(() => { alert("⚠️ 認証通信に失敗しました。"); });
+    }
+
+    // 📰 ニュースセクション
+    function fetchNewsData() {
+      const newsCsvUrl = `${DATA_SPREADSHEET}/gviz/tq?tqx=out:csv&sheet=%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%B9`;
+      fetch(newsCsvUrl).then(res => res.text()).then(text => {
+        const lines = text.split(/\r?\n/);
+        rawNewsData = [];
+        lines.forEach(line => {
+          if(!line.trim()) return;
+          const row = line.split(",").map(c => c.replace(/^"|"$/g, "").trim());
+          if(row[0] && row[1]) rawNewsData.push({ category: row[0], title: row[1], url: row[2]||"#" });
+        });
+        renderNewsList('すべて');
+      }).catch(() => { document.getElementById('news-content-target').innerText = "ニュースの取得に失敗しました。"; });
+    }
+
+    function renderNewsList(cat) {
+      const container = document.getElementById('news-content-target');
+      container.innerHTML = "";
+      const filtered = rawNewsData.filter(item => cat === 'すべて' || item.category === cat);
+      if(filtered.length === 0) { container.innerHTML = `<div class="news-loading">現在データがありません。</div>`; return; }
+      const ul = document.createElement('ul'); ul.className = "news-list";
+      filtered.forEach(item => {
+        const li = document.createElement('li'); li.className = "news-item";
+        let bClass = "badge-default";
+        if(item.category === 'ニュース') bClass = "badge-news";
+        if(item.category === 'おトク') bClass = "badge-otoku";
+        if(item.category === '芸能') bClass = "badge-geino";
+        if(item.category === 'スポーツ') bClass = "badge-sports";
+        
+        li.innerHTML = `<a href="${item.url}" class="news-link" ${item.url.startsWith('http')?'target="_blank"':''}>${cat==='すべて'?`<span class="category-badge ${bClass}">${item.category}</span>`:''}<span>${item.title}</span></a>`;
+        ul.appendChild(li);
+      });
+      container.appendChild(ul);
+    }
+
+    function switchNewsTab(cat, btn) {
+      document.querySelectorAll('.news-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active'); renderNewsList(cat);
+    }
+
+    function openAuthModal() { document.getElementById('auth-modal').style.display = 'flex'; }
+    function closeAuthModal() { document.getElementById('auth-modal').style.display = 'none'; }
+  </script>
+</body>
+  </html>
+  
